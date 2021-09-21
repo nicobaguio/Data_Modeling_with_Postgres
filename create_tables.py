@@ -63,6 +63,8 @@ def main():
     drop_tables(cur, conn)
     create_tables(cur, conn)
 
+    print("INFO: Table Creation Successful!")
+
     conn.close()
 
 
