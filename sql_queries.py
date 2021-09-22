@@ -66,19 +66,24 @@ time_table_create = ("""
 # INSERT RECORDS
 
 songplay_table_insert = ("""
+    INSERT INTO songplays VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
 """)
 
 user_table_insert = ("""
+    INSERT INTO users VALUES (%s, %s, %s, %s, %s)
 """)
 
 song_table_insert = ("""
+    INSERT INTO songs VALUES (%s, %s, %s, %s, %s)
 """)
 
 artist_table_insert = ("""
+    INSERT INTO artists VALUES (%s, %s, %s, %s, %s)
 """)
 
 
 time_table_insert = ("""
+    INSERT INTO time VALUES (%s, %s, %s, %s, %s, %s)
 """)
 
 # FIND SONGS
