@@ -66,7 +66,7 @@ time_table_create = ("""
 # INSERT RECORDS
 
 songplay_table_insert = ("""
-    INSERT INTO songplays VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+    INSERT INTO songplays VALUES (DEFAULT, %s, %s, %s, %s, %s, %s, %s, %s)
 """)
 
 user_table_insert = ("""

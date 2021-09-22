@@ -4,11 +4,31 @@ from dotenv import dotenv_values
 from pandas.core.algorithms import isin
 import psycopg2
 import pandas as pd
-# from sql_queries import *
 from io import StringIO
 import json
+import argparse
+from sql_queries import *
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument('-i', '--insert', help="Insert records individually.", action='store_true')
+args = parser.parse_args()
 
 config = dict(dotenv_values(".env"))
+
+def insert_data(cur, df, sql_str):
+    if isinstance(df, pd.DataFrame):
+        try:
+            for _, dat in df.iterrows():
+                cur.execute(sql_str, dat.tolist())
+
+            print("Success: inserted data into the database.")
+        except psycopg2.Error as e:
+            print("Error: copying data to database.\n")
+            print(e)
+
+    else:
+        print("Error: df is not a pandas dataframe.")
 
 def upload_data(cur, df, table):
     buffer = StringIO()
@@ -20,8 +40,9 @@ def upload_data(cur, df, table):
             cur.copy_from(buffer, table, sep="\t", columns=tuple(df.columns), null="")
             print(f"Success: inserted data successfully into {table} table in database.")
 
-        except:
-            print(f"Error: copying data to {table} table in database.")
+        except psycopg2.Error as e:
+            print(f"Error: copying data to {table} table in database.\n")
+            print(e)
 
     else:
         print("Error: df is not a pandas dataframe.")
@@ -47,8 +68,13 @@ def process_songs(cur, df):
     artists_df.drop_duplicates(subset='artist_id', inplace=True)
 
     # Upload to appropriate tables in database
-    upload_data(cur, songs_df, 'songs')
-    upload_data(cur, artists_df, 'artists')
+    if args.insert:
+        insert_data(cur, songs_df, song_table_insert)
+        insert_data(cur, artists_df, artist_table_insert)
+    else:
+        upload_data(cur, songs_df, 'songs')
+        upload_data(cur, artists_df, 'artists')
+    
 
 def process_logs(cur, df):
     # filter by NextSong action
@@ -116,7 +142,8 @@ def process_logs(cur, df):
 
     correct_order = ['ts_dt', 'userId', 'level', 'song_id', 'artist_id', 'sessionId', 'location', 'userAgent']
 
-    songplays_df = songplay_merged_df[correct_order]
+    songplays_df = songplay_merged_df[correct_order].copy()
+
     songplays_df.rename(columns={
         'ts_dt': 'start_time',
         'userId': 'user_id',
@@ -125,9 +152,16 @@ def process_logs(cur, df):
     }, inplace=True)
 
     # Upload to approriate table in database
-    upload_data(cur, time_df, 'time')
-    upload_data(cur, user_df, 'users')
-    upload_data(cur, songplays_df, 'songplays')
+
+    if args.insert:
+        insert_data(cur, time_df, time_table_insert)
+        insert_data(cur, user_df, user_table_insert)
+        insert_data(cur, songplays_df, songplay_table_insert)
+
+    else:
+        upload_data(cur, time_df, 'time')
+        upload_data(cur, user_df, 'users')
+        upload_data(cur, songplays_df, 'songplays')
 
 def process_data(cur, conn, filepath, func):
     json_wildcard = os.path.join(filepath, "**", "*.json")
