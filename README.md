@@ -90,6 +90,11 @@ To use the code:
 
         py etl.py
 
+    By default, the ETL scripts inserts data using the `COPY` SQL command. To insert data into the database individually (using the `INSERT INTO` SQL command), just add the `-i` or `--insert` flag ***AFTER the script***:
+
+        py etl.py -i
+        py etl.py --insert
+
 
 <!-- LICENSE -->
 ## License
