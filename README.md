@@ -50,7 +50,7 @@ To get a local copy up and running follow these simple steps.
 
 ### Prerequisites
 
-* You must have the latest <a href="https://www.python.org/downloads/">Python version (3.9)</a> to run. Using older versions might cause instability in the performance of the module. 
+* You must have the latest <a href="https://www.python.org/downloads/">Python version (3.9.7)</a> to run. Using older versions might cause instability in the performance of the module. 
 
 ### Installation
 
