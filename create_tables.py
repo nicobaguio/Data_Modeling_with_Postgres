@@ -1,6 +1,8 @@
 import psycopg2
 from sql_queries import create_table_queries, drop_table_queries
+from dotenv import dotenv_values
 
+config = dict(dotenv_values(".env"))
 
 def create_database():
     """
@@ -9,7 +11,7 @@ def create_database():
     """
     
     # connect to default database
-    conn = psycopg2.connect("host=127.0.0.1 user=postgres password=070319nico")
+    conn = psycopg2.connect(f"host={config['host']} user={config['user']} password={config['password']}")
     conn.set_session(autocommit=True)
     cur = conn.cursor()
     
@@ -21,7 +23,7 @@ def create_database():
     conn.close()    
     
     # connect to sparkify database
-    conn = psycopg2.connect("host=127.0.0.1 dbname=sparkifydb user=postgres password=070319nico")
+    conn = psycopg2.connect(f"host={config['host']} dbname={config['dbname']} user={config['user']} password={config['password']}")
     cur = conn.cursor()
     
     return cur, conn
@@ -38,7 +40,7 @@ def drop_tables(cur, conn):
 
 def create_tables(cur, conn):
     """
-    Creates each table using the queries in `create_table_queries` list. 
+    Creates each table using the queries in `create_table_queries` list.
     """
     for query in create_table_queries:
         cur.execute(query)
