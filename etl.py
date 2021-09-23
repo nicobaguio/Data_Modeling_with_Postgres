@@ -17,6 +17,14 @@ args = parser.parse_args()
 config = dict(dotenv_values(".env"))
 
 def insert_data(cur, df, sql_str):
+    """
+        Helper function to insert data into tables in the database using INSERT SQL command.
+
+        Arguments:
+            cur     -- Cursor object.
+            df      -- Pandas DataFrame to insert into database.
+            sql_str -- SQL string to user for insertion.
+    """
     if isinstance(df, pd.DataFrame):
         try:
             for _, dat in df.iterrows():
@@ -31,6 +39,14 @@ def insert_data(cur, df, sql_str):
         print("Error: df is not a pandas dataframe.")
 
 def upload_data(cur, df, table):
+    """
+        Helper function to insert data into tables in the database using COPY FROM SQL command.
+
+        Arguments:
+            cur   -- Cursor object.
+            df    -- Pandas DataFrame to insert into database.
+            table -- Table in database to insert `df` into.
+    """
     buffer = StringIO()
     if isinstance(df, pd.DataFrame):
         df.to_csv(buffer, header=False, index=False, sep="\t")
@@ -48,6 +64,13 @@ def upload_data(cur, df, table):
         print("Error: df is not a pandas dataframe.")
 
 def process_songs(cur, df):
+    """
+        Prepares, transforms & inserts song data into relevant tables (songs & artists) in the database.
+
+        Arguments:
+            cur -- Cursor object.
+            df  -- Pandas DataFrame to insert into database.
+    """
     # Process Songs Table
     songs_df = df[
         ['song_id', 'title', 'artist_id', 'year', 'duration']
@@ -65,7 +88,8 @@ def process_songs(cur, df):
         'artist_longitude': 'longitude',
     }, inplace=True)
 
-    artists_df.drop_duplicates(subset='artist_id', inplace=True)
+    if not args.insert:
+        artists_df.drop_duplicates(subset='artist_id', inplace=True)
 
     # Upload to appropriate tables in database
     if args.insert:
@@ -77,6 +101,13 @@ def process_songs(cur, df):
     
 
 def process_logs(cur, df):
+    """
+        Prepares, transforms & inserts log data into relevant tables (time, users & songplays) in the database.
+
+        Arguments:
+            cur -- Cursor object.
+            df  -- Pandas DataFrame to insert into database.
+    """
     # filter by NextSong action
     next_songs_df = df.loc[df['page'] == 'NextSong'].copy()
     # next_songs_df.reset_index(drop=True, inplace=True)
@@ -97,18 +128,22 @@ def process_logs(cur, df):
         'year': v.year
     } for _, v in next_songs_df['ts_dt'].items()])
 
-    time_df.drop_duplicates(subset=['start_time'], inplace=True)
+    if not args.insert:
+        time_df.drop_duplicates(subset=['start_time'], inplace=True)
 
     # Process User Table
-    user_df = next_songs_df[['userId', 'firstName', 'lastName', 'gender', 'level']]
-    
+    user_df = next_songs_df[['userId', 'firstName', 'lastName', 'gender', 'level', 'ts_dt']]
+
+    user_df = user_df.sort_values('ts_dt')
+
+    user_df = user_df.drop('ts_dt', axis=1)
     user_df = user_df.rename(columns={
         'userId': 'user_id',
         'firstName': 'first_name',
         'lastName': 'last_name'
     })
-
-    user_df = user_df.drop_duplicates('user_id')
+    if not args.insert:
+        user_df.drop_duplicates('user_id', keep="last", inplace=True)
 
     # Process Songplay Table
     
@@ -164,6 +199,18 @@ def process_logs(cur, df):
         upload_data(cur, songplays_df, 'songplays')
 
 def process_data(cur, conn, filepath, func):
+    """
+        Responsible for listing all the files, recursively, in a particular directory.
+        Flattens all JSON files into a singular list for easier ingestion into a pandas
+        DataFrame. Finally, executes the function that performs the transformation and
+        insertion into the database.
+
+        Arguments:
+            cur      -- Cursor object.
+            conn     -- Connection object.
+            filepath -- Valid root filepath where data is stored. 
+            func     -- Function that transforms and insert the data into the database.
+    """
     json_wildcard = os.path.join(filepath, "**", "*.json")
     files = glob.glob(json_wildcard, recursive=True)
 
@@ -181,6 +228,12 @@ def process_data(cur, conn, filepath, func):
     conn.commit()
 
 def main():
+    """
+        1. Connects to the Database using the variables found in the .env file.
+        2. Creates a cursor object from the connection.
+        3. Process log & song data.
+        4. Closes Connection.
+    """
     conn = psycopg2.connect(**config)
     cur = conn.cursor()
     
